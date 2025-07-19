@@ -5,15 +5,15 @@ This project builds a modular, orientation-controlled laser turret that tracks t
 
 It uses dual ESP32 microcontrollers—one to read orientation, the other to control the turret—and is designed to expand into visual object tracking, cloud ML, and remote control.
 
-Main objectives are
-Track and replicate user hand orientation using IMU data (yaw/pitch).
+ 🎯 Main Objectives
+-
+- Track and replicate user hand orientation using IMU data (yaw/pitch).
 
-Use two ESP32s: one for control (ESP1), one for sensing (ESP2).
+- Use two ESP32s: one for control (ESP1), one for sensing (ESP2).
 
-Display system state and orientation data on a TFT screen.
+- Display system state and orientation data on a TFT screen.
 
-Support future vision (ESP32-CAM) and Cloud-based ML tasks.
-
+- Support future vision (ESP32-CAM) and Cloud-based ML tasks.
 
 
 Using a Firebeetle2, NodeMCU-32S to communicate with each other and arduino nano to get and clean data from input sensor (just in case theres not enough space on the ESP's)
