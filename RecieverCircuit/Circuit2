@@ -1,0 +1,63 @@
+#include <ESP32Servo.h>
+#include <esp_now.h>
+#include <WiFi.h>
+
+#define PI 3.1415926
+
+float aX, aY, aZ, gX, gY, gZ;
+
+typedef struct struct_messege {
+  float aX, aY, aZ, gX, gY, gZ;
+} struct_messege;
+
+struct_messege myData;
+float smoothpan;
+float smoothtilt;
+const float smooth = 0.3;
+Servo panservo;
+Servo tiltservo;
+
+void OnDataRecv(const uint8_t * mac, const uint8_t *incomingData, int len) {
+  memcpy(&myData, incomingData, sizeof(myData));
+  Serial.printf("Bytes received: %d\n", len);
+  Serial.printf("Accel X: %.2f Y: %.2f Z: %.2f\n", myData.aX, myData.aY, myData.aZ);
+  Serial.printf("Gyro  X: %.2f Y: %.2f Z: %.2f\n\n", myData.gX, myData.gY, myData.gZ);
+}
+
+int panservoPin = 4;     // GPIO4 → physical D12
+int tiltservopin = 12;   // GPIO12 → physical D13
+
+void setup() {
+  Serial.begin(115200);
+
+  WiFi.mode(WIFI_STA);
+  esp_now_init();
+  esp_now_register_recv_cb(esp_now_recv_cb_t(OnDataRecv));
+
+  ESP32PWM::allocateTimer(0);
+  ESP32PWM::allocateTimer(1);
+
+  panservo.setPeriodHertz(50);
+  tiltservo.setPeriodHertz(50);
+
+  panservo.attach(panservoPin, 1000, 2000);
+  tiltservo.attach(tiltservopin, 700, 2300);
+}
+
+void loop() {
+  float yaw = atan2(myData.aX, myData.aZ) * 180.0 / PI;
+  float mappedPan = map(yaw, -90, 90, 0, 200);
+  mappedPan = constrain(mappedPan, 0, 200);
+  smoothpan = smooth * mappedPan + (1-smooth) * smoothpan;
+  panservo.write(mappedPan);
+
+  float pitch = atan2(myData.aY, sqrt(myData.aX * myData.aX + myData.aZ * myData.aZ)) * 180.0 / PI;
+  float mappedTilt = map(pitch, -90, 90, 0, 200);
+  mappedTilt = constrain(mappedTilt, 0, 200);
+  smoothtilt = smooth * mappedTilt + (1-smooth) *smoothtilt;
+  tiltservo.write(mappedTilt);
+  Serial.print("Tilt Angle: ");
+  Serial.println(pitch);
+  Serial.printf("mappedTilt %.2f", mappedTilt);
+
+}
