@@ -1,0 +1,74 @@
+/* Used better smoothing for less jitter
+changed the tilt so now it follows the Y axis instead of Z 
+sed absolute tracking, next should be relative tracking 
+Fixing the horizontal pan too so its more intuitive */
+#include <ESP32Servo.h>
+#include <esp_now.h>
+#include <WiFi.h>
+#define PI 3.1415926
+
+float aX, aY, aZ, gX, gY, gZ;
+
+typedef struct struct_messege {
+  float aX, aY, aZ, gX, gY, gZ;
+} struct_messege;
+
+struct_messege myData;
+float smoothpan;
+float smoothtilt;
+const float smooth = 0.005;
+Servo panservo;
+Servo tiltservo;
+unsigned long lastUpdate = 0;
+const int updateInterval = 10;
+void OnDataRecv(const uint8_t * mac, const uint8_t *incomingData, int len) {
+  memcpy(&myData, incomingData, sizeof(myData));
+  Serial.printf("Bytes received: %d\n", len);
+  Serial.printf("Accel X: %.2f Y: %.2f Z: %.2f\n", myData.aX, myData.aY, myData.aZ);
+  Serial.printf("Gyro  X: %.2f Y: %.2f Z: %.2f\n\n", myData.gX, myData.gY, myData.gZ);
+}
+
+int panservoPin = 4;     // GPIO4 
+int tiltservopin = 12;   // GPIO12
+
+void setup() {
+  Serial.begin(115200);
+
+  WiFi.mode(WIFI_STA);
+  esp_now_init();
+  esp_now_register_recv_cb(esp_now_recv_cb_t(OnDataRecv));
+
+  ESP32PWM::allocateTimer(0);
+  ESP32PWM::allocateTimer(1);
+
+  panservo.setPeriodHertz(50);
+  tiltservo.setPeriodHertz(50);
+
+  panservo.attach(panservoPin, 700, 2300);
+  tiltservo.attach(tiltservopin, 700, 2300);
+}
+
+void loop() {
+  if (millis()- lastUpdate >= updateInterval){
+    lastUpdate = millis();
+  }
+  // Code for horizontal pan
+  float yaw = atan2(myData.aX, myData.aY) * 180.0 / PI;
+  float mappedPan = map(yaw, -90, 90, -10, 200);
+  smoothpan = smooth * mappedPan + (1-smooth) * smoothpan;
+  panservo.write(smoothpan);
+  
+
+  // Code for vertical tilt
+  float pitch = atan2(myData.aZ, sqrt(myData.aY * myData.aY + myData.aX * myData.aX)) * 180.0 / PI;
+  float mappedTilt = map(pitch, -90, 90, -10, 200); // in practice, Input (-90,90) Output(0,180) didnt use all degs of rotation in servo so 0->-10 and 180->200
+  smoothtilt = smooth * mappedTilt + (1-smooth) *smoothtilt;
+
+
+
+  tiltservo.write(smoothtilt);
+  Serial.print("Tilt Angle: ");
+  Serial.println(pitch);
+  Serial.printf("mappedTilt %.2f", smoothtilt);
+
+}
