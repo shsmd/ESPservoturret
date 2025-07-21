@@ -1,7 +1,7 @@
 /* Used better smoothing for less jitter
 changed the tilt so now it follows the Y axis instead of Z 
 sed absolute tracking, next should be relative tracking 
-Fixing the horizontal pan too so its more intuitive */
+Fixing the horizontal pan too so its more intuitive and to add less jitter/decrease sensitivity of both servos */
 #include <ESP32Servo.h>
 #include <esp_now.h>
 #include <WiFi.h>
